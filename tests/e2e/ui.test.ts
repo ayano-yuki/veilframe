@@ -95,7 +95,14 @@ test('公開接続情報には秘密とURLを含めない', async ({ request }) 
   expect(response.ok()).toBe(true);
   expect(await response.json()).toEqual({
     localEnabled: false,
-    connections: [{ id: 'shaka-widevine', name: 'Shaka 公開テスト' }],
+    connections: [
+      { id: 'shaka-widevine', name: 'Shaka 公開テスト', drm: 'widevine' },
+      {
+        id: 'microsoft-playready',
+        name: 'Microsoft PlayReady 公開テスト',
+        drm: 'playready',
+      },
+    ],
   });
   expect(
     (await request.post('/api/license/arbitrary', { data: 'test' })).status(),
@@ -131,4 +138,38 @@ test('旧IndexedDB記録を再読み込み後も表示できる', async ({ page 
   await expect(page.getByRole('region', { name: '記録詳細' })).toContainText(
     '未確認 / 140',
   );
+});
+
+test('PlayReadyの手動選択とSL3000を記録する', async ({ page }, info) => {
+  await page.goto('/');
+  await page.getByLabel('DRM方式').selectOption('playready');
+  await expect(page.getByLabel('素材')).toContainText('Tears of Steel');
+  await page.getByRole('button', { name: '再生を開始' }).click();
+  await expect(page.getByRole('status').first()).toHaveText('再生中');
+  await screenshot(page, info, 'playready-normal');
+  await page.getByRole('radio', { name: 'ハードウェア保護' }).check();
+  await expect(page.getByRole('status').first()).toHaveText('待機中');
+  await page.getByRole('button', { name: '再生を開始' }).click();
+  await screenshot(page, info, 'playready-hardware');
+  await page.getByLabel('ブラウザの種類').selectOption('edge');
+  await page.getByLabel('OS', { exact: true }).fill('Windows 11');
+  await page
+    .getByLabel('メモ')
+    .fill('UIテスト用のPlayReady記録。実機の結果ではありません。');
+  await page.getByRole('button', { name: '検証記録を保存' }).click();
+  await expect(page.getByRole('status').last()).toHaveText(
+    '記録をこのブラウザに保存しました。',
+  );
+  await page.getByRole('link', { name: '記録', exact: true }).click();
+  await page.getByRole('button', { name: /Tears of Steel/ }).click();
+  await expect(page.getByRole('region', { name: '記録詳細' })).toContainText(
+    'PlayReady',
+  );
+  await expect(page.getByRole('region', { name: '記録詳細' })).toContainText(
+    'SL3000',
+  );
+  await expect(page.getByRole('region', { name: '記録詳細' })).toContainText(
+    'Edge',
+  );
+  await screenshot(page, info, 'playready-record');
 });

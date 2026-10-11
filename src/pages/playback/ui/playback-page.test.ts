@@ -9,11 +9,20 @@ const mocks = vi.hoisted(() => ({
   data: {
     value: {
       localEnabled: true,
-      connections: [{ id: 'shaka-widevine', name: 'Shaka 公開テスト' }],
+      connections: [
+        { id: 'shaka-widevine', name: 'Shaka 公開テスト', drm: 'widevine' },
+      ],
     },
   } as {
     value:
-      | { localEnabled: boolean; connections: { id: string; name: string }[] }
+      | {
+          localEnabled: boolean;
+          connections: {
+            id: string;
+            name: string;
+            drm: 'widevine' | 'playready';
+          }[];
+        }
       | undefined;
   },
   error: { value: null as Error | null },
@@ -38,7 +47,9 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.data = ref({
     localEnabled: true,
-    connections: [{ id: 'shaka-widevine', name: 'Shaka 公開テスト' }],
+    connections: [
+      { id: 'shaka-widevine', name: 'Shaka 公開テスト', drm: 'widevine' },
+    ],
   });
   mocks.error = ref(null);
   mocks.load.mockResolvedValue(undefined);
@@ -68,6 +79,50 @@ async function attach(
 }
 
 describe('再生・検証画面', () => {
+  it('PlayReadyを手動選択して通常・SL3000を区別し、方式変更で停止する', async () => {
+    mocks.data.value!.connections.push({
+      id: 'microsoft-playready',
+      name: 'Microsoft PlayReady 公開テスト',
+      drm: 'playready',
+    });
+    const wrapper = await mountSuspended(PlaybackPage);
+    await wrapper.findAll('.controls select')[0]!.setValue('playready');
+    await start(wrapper);
+    expect(mocks.load).toHaveBeenLastCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        drm: 'playready',
+        mode: 'normal',
+        licenseUrl: '/api/license/microsoft-playready',
+        serverCertificateUrl: '',
+      }),
+    );
+    await save(wrapper);
+    expect((mocks.save.mock.calls[0]![0] as StoredRecord).record).toMatchObject(
+      {
+        drm: 'playready',
+        robustness: 'default',
+        materialName: 'Tears of Steel / PlayReady',
+      },
+    );
+    await wrapper.get('input[value="hardware"]').setValue();
+    await start(wrapper);
+    await wrapper.findAll('form select')[0]!.setValue('edge');
+    await save(wrapper);
+    expect((mocks.save.mock.calls[1]![0] as StoredRecord).record).toMatchObject(
+      {
+        drm: 'playready',
+        robustness: 'SL3000',
+        environment: { browserName: 'edge' },
+      },
+    );
+    expect(wrapper.text()).toContain('映像にSL3000');
+    await wrapper.findAll('.controls select')[0]!.setValue('widevine');
+    await flushPromises();
+    expect(wrapper.get('.status-bar [role="status"]').text()).toBe('待機中');
+    expect(wrapper.text()).toContain('Sintel');
+    wrapper.unmount();
+  });
   it('通常再生と画像付き保存を行い、URLを記録へ含めない', async () => {
     const wrapper = await mountSuspended(PlaybackPage);
     await start(wrapper);
@@ -143,11 +198,11 @@ describe('再生・検証画面', () => {
   });
   it('独自素材のURLを検証して許可された接続へ送る', async () => {
     const wrapper = await mountSuspended(PlaybackPage);
-    await wrapper.get('select').setValue('custom');
+    await wrapper.findAll('.controls select')[1]!.setValue('custom');
     await wrapper
       .get('.controls input:not([type="url"]):not([type="radio"])')
       .setValue('独自素材');
-    await wrapper.findAll('.controls select')[1]!.setValue('shaka-widevine');
+    await wrapper.findAll('.controls select')[2]!.setValue('shaka-widevine');
     for (const value of [
       '',
       'http://example.test/video',

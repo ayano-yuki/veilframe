@@ -1,7 +1,7 @@
-import { createRecordFixture } from './create-record-fixture';
+import { createPreviousRecordFixture } from './create-previous-record-fixture';
 
 export function createLegacyRecordFixture() {
-  const entry = createRecordFixture();
+  const entry = createPreviousRecordFixture();
   return {
     record: {
       ...entry.record,

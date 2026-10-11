@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { createRecordFixture } from '../../../../tests/support/create-record-fixture';
 import { createLegacyRecordFixture } from '../../../../tests/support/create-legacy-record-fixture';
+import { createPreviousRecordFixture } from '../../../../tests/support/create-previous-record-fixture';
 import {
   archiveLimit,
   expandedLimit,
@@ -10,7 +11,35 @@ import {
 import { exportRecords, importRecords } from './record-archive';
 
 describe('ZIPの交換', () => {
-  it('旧ZIPの種類を推測せず変換し、新ZIPはversion 2として出力する', async () => {
+  it('version 2をWidevineとして変換し、PlayReadyをversion 3で往復する', async () => {
+    const previous = createPreviousRecordFixture();
+    const restored = importRecords(
+      zipSync({
+        'records.json': strToU8(
+          JSON.stringify({ version: 2, records: [previous.record] }),
+        ),
+      }),
+    );
+    expect(restored[0]?.record.drm).toBe('widevine');
+    expect(restored[0]?.record.environment.browserName).toBe('chrome');
+    const playready = createRecordFixture();
+    playready.record.drm = 'playready';
+    playready.record.mode = 'hardware';
+    playready.record.robustness = 'SL3000';
+    expect(importRecords(await exportRecords([playready]))[0]?.record).toEqual(
+      playready.record,
+    );
+    expect(() =>
+      importRecords(
+        zipSync({
+          'records.json': strToU8(
+            JSON.stringify({ version: 2, records: [playready.record] }),
+          ),
+        }),
+      ),
+    ).toThrow();
+  });
+  it('旧ZIPの種類を推測せず変換し、新ZIPはversion 3として出力する', async () => {
     const legacy = createLegacyRecordFixture();
     const id = crypto.randomUUID();
     legacy.record.images = [{ id, type: 'image/png', size: 3 }];
@@ -28,12 +57,12 @@ describe('ZIPの交換', () => {
     const document = JSON.parse(
       strFromU8(unzipSync(await exportRecords(restored))['records.json']!),
     );
-    expect(document.version).toBe(2);
+    expect(document.version).toBe(3);
     expect(document.records[0].environment).not.toHaveProperty('chrome');
     for (const [version, record] of [
       [1, createRecordFixture().record],
       [2, legacy.record],
-      [3, legacy.record],
+      [4, legacy.record],
     ]) {
       expect(() =>
         importRecords(
@@ -75,7 +104,7 @@ describe('ZIPの交換', () => {
         zipSync({
           'records.json': strToU8(
             JSON.stringify({
-              version: 2,
+              version: 3,
               records: [entry.record, entry.record],
             }),
           ),
@@ -89,7 +118,7 @@ describe('ZIPの交換', () => {
       importRecords(
         zipSync({
           'records.json': strToU8(
-            JSON.stringify({ version: 2, records: [entry.record] }),
+            JSON.stringify({ version: 3, records: [entry.record] }),
           ),
         }),
       ),
@@ -104,7 +133,7 @@ describe('ZIPの交換', () => {
     expect(() =>
       importRecords(
         zipSync({
-          'records.json': strToU8(JSON.stringify({ version: 2, records: [] })),
+          'records.json': strToU8(JSON.stringify({ version: 3, records: [] })),
           [name]: strToU8('extra'),
         }),
       ),

@@ -9,19 +9,32 @@ export function resolveConnections(
   connectionsJson: string,
   vercel: boolean,
 ): LicenseConnection[] {
-  const publicConnection: LicenseConnection = {
-    id: 'shaka-widevine',
-    name: 'Shaka 公開テスト',
-    url: 'https://proxy.uat.widevine.com/proxy',
-    headers: {},
-  };
+  const publicConnections: LicenseConnection[] = [
+    {
+      id: 'shaka-widevine',
+      name: 'Shaka 公開テスト',
+      drm: 'widevine',
+      url: 'https://proxy.uat.widevine.com/proxy',
+      headers: {},
+    },
+    {
+      id: 'microsoft-playready',
+      name: 'Microsoft PlayReady 公開テスト',
+      drm: 'playready',
+      url: 'https://test.playready.microsoft.com/service/rightsmanager.asmx?cfg=(persist:false,sl:150)',
+      headers: {},
+    },
+  ];
   if (vercel || (enabled !== true && enabled !== 'true')) {
-    return [publicConnection];
+    return publicConnections;
   }
   const custom = z.array(connectionSchema).parse(JSON.parse(connectionsJson));
   const ids = custom.map((connection) => connection.id);
-  if (ids.includes(publicConnection.id) || new Set(ids).size !== ids.length) {
+  if (
+    publicConnections.some((connection) => ids.includes(connection.id)) ||
+    new Set(ids).size !== ids.length
+  ) {
     throw new Error('接続先IDが重複しています。');
   }
-  return [publicConnection, ...custom];
+  return [...publicConnections, ...custom];
 }

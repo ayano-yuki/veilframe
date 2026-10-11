@@ -96,3 +96,11 @@
 - ブラウザの種類とバージョンを別項目にし、種類はChrome・Brave・未確認から手動選択する。
 - 既存記録と旧ZIPを読み込めるようにする。旧種類は推測せず未確認とする。
 - CIは既存のChromium UIテストを維持する。Brave実体のWidevine再生とOS撮影はWindows・Androidで手動検証する。
+
+## PlayReady対応の合意
+
+- Windowsのハードウェア保護検証にEdge＋PlayReadyを追加する。
+- PlayReady保護モードは映像にSL3000を要求し、音声は既定条件を使う。非対応時は停止し、通常モードへフォールバックしない。
+- DRM方式はWidevine／PlayReadyから手動選択する。ブラウザ情報から自動変更しない。
+- 記録にDRM方式を追加し、HW_SECURE_ALLとSL3000を区別する。ブラウザ種類にEdgeを追加する。
+- 旧記録・旧ZIPをWidevine記録として読み込み、新規ZIPはversion 3にする。

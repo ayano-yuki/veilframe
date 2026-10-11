@@ -12,7 +12,7 @@ describe('接続先の境界', () => {
     '既定で独自接続を無効にする %s',
     (enabled) => {
       expect(resolveConnections(enabled, 'invalid json', false)).toHaveLength(
-        1,
+        2,
       );
     },
   );
@@ -20,9 +20,9 @@ describe('接続先の境界', () => {
     '明示的に有効化したローカルでは設定を検証する %s',
     (enabled) => {
       expect(
-        resolveConnections(enabled, JSON.stringify([custom]), false)[1],
-      ).toEqual(custom);
-      expect(resolveConnections(enabled, 'invalid json', true)).toHaveLength(1);
+        resolveConnections(enabled, JSON.stringify([custom]), false)[2],
+      ).toEqual({ ...custom, drm: 'widevine' });
+      expect(resolveConnections(enabled, 'invalid json', true)).toHaveLength(2);
     },
   );
   it('重複IDや公開接続先の置き換えを拒否する', () => {
@@ -47,6 +47,6 @@ describe('接続先の境界', () => {
     ).toThrow();
   });
   it('空の設定を許可する', () => {
-    expect(resolveConnections(true, '[]', false)).toHaveLength(1);
+    expect(resolveConnections(true, '[]', false)).toHaveLength(2);
   });
 });

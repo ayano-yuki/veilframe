@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useFetch } from '#imports';
 import { createShakaPlayer } from '@fsd/entities/playback/api/create-shaka-player';
 import type {
+  DrmSystem,
   PlaybackMode,
   PlaybackState,
 } from '@fsd/entities/playback/model/playback-port';
@@ -17,6 +18,7 @@ import { useCaptureDraft } from '@fsd/features/record-capture/model/use-capture-
 
 const { data, error: connectionsError } = await useFetch('/api/connections');
 const draft = useCaptureDraft();
+const drm = ref<DrmSystem>('widevine');
 const mode = ref<PlaybackMode>('normal');
 const material = ref('sintel');
 const manifestUrl = ref(data.value?.defaults?.manifestUrl ?? '');
@@ -44,16 +46,35 @@ const states: Record<PlaybackState, string> = {
 const isCustom = computed(
   () => material.value === 'custom' && data.value?.localEnabled,
 );
+const publicConnectionId = computed(() =>
+  drm.value === 'playready' ? 'microsoft-playready' : 'shaka-widevine',
+);
+const publicMaterialName = computed(() =>
+  drm.value === 'playready'
+    ? 'Tears of Steel / PlayReady'
+    : 'Sintel / Widevine',
+);
+const requestedRobustness = computed(() =>
+  mode.value === 'hardware'
+    ? drm.value === 'playready'
+      ? 'SL3000'
+      : 'HW_SECURE_ALL'
+    : 'default',
+);
+const availableConnections = computed(() =>
+  data.value?.connections.filter((item) => item.drm === drm.value),
+);
 const name = computed(() =>
-  isCustom.value ? materialName.value : 'Sintel / Widevine',
+  isCustom.value ? materialName.value : publicMaterialName.value,
 );
 const connection = computed(() =>
-  data.value?.connections.find(
+  availableConnections.value?.find(
     (item) =>
-      item.id === (isCustom.value ? connectionId.value : 'shaka-widevine'),
+      item.id ===
+      (isCustom.value ? connectionId.value : publicConnectionId.value),
   ),
 );
-watch([mode, material, manifestUrl, connectionId], () => {
+watch([drm, mode, material, manifestUrl, connectionId], () => {
   void controller.reset().catch(() => {
     message.value =
       'プレイヤーの終了処理に失敗しました。ページを再読み込みしてください。';
@@ -73,7 +94,9 @@ async function startPlayback() {
     return;
   }
   let url =
-    'https://storage.googleapis.com/shaka-demo-assets/sintel-widevine/dash.mpd';
+    drm.value === 'playready'
+      ? 'https://test.playready.microsoft.com/media/profficialsite/tearsofsteel_4k.ism/manifest.mpd'
+      : 'https://storage.googleapis.com/shaka-demo-assets/sintel-widevine/dash.mpd';
   if (isCustom.value) {
     try {
       const parsed = new URL(manifestUrl.value);
@@ -88,12 +111,14 @@ async function startPlayback() {
     }
   }
   await controller.start(video.value, {
+    drm: drm.value,
     manifestUrl: url,
     licenseUrl: `/api/license/${connection.value.id}`,
     mode: mode.value,
-    serverCertificateUrl: isCustom.value
-      ? ''
-      : 'https://cwip-shaka-proxy.appspot.com/service-cert',
+    serverCertificateUrl:
+      isCustom.value || drm.value === 'playready'
+        ? ''
+        : 'https://cwip-shaka-proxy.appspot.com/service-cert',
   });
 }
 function attachImages(event: Event) {
@@ -135,8 +160,9 @@ async function saveRecord() {
         createdAt: new Date().toISOString(),
         materialName: name.value,
         connectionName: connection.value?.name ?? '不明',
+        drm: drm.value,
         mode: mode.value,
-        robustness: mode.value === 'hardware' ? 'HW_SECURE_ALL' : 'default',
+        robustness: requestedRobustness.value,
         capability:
           state.value === 'playing'
             ? 'supported'
@@ -182,7 +208,7 @@ async function saveRecord() {
       <p class="eyebrow">01 / playback experiment</p>
       <h1>見える映像、その先を確かめる。</h1>
     </div>
-    <span class="protocol">WIDEVINE / CHROME + BRAVE</span>
+    <span class="protocol">WIDEVINE + PLAYREADY</span>
   </div>
   <div class="workspace">
     <section class="player-area" aria-label="動画プレイヤー">
@@ -205,14 +231,12 @@ async function saveRecord() {
           class="status-dot"
           :class="{ active: state === 'playing' }"
         /><span role="status">{{ states[state] }}</span
-        ><span class="mode-tag">{{
-          mode === 'hardware' ? 'HW_SECURE_ALL' : 'DEFAULT'
-        }}</span>
+        ><span class="mode-tag">{{ requestedRobustness }}</span>
       </div>
       <p class="muted disclaimer">
         画面キャプチャの結果はOS・端末・ブラウザに依存します。再生の成功だけでは、キャプチャ時の黒画面化を確認できません。
       </p>
-      <p class="muted small">
+      <p v-if="drm === 'widevine'" class="muted small">
         Sintel © Blender Foundation —
         <a
           href="https://durian.blender.org/about/"
@@ -222,26 +246,47 @@ async function saveRecord() {
         >
         · Shaka Player公開テスト素材
       </p>
+      <p v-else class="muted small">
+        Tears of Steel © Blender Foundation —
+        <a
+          href="https://mango.blender.org/about/"
+          target="_blank"
+          rel="noopener noreferrer"
+          >CC BY 3.0 / 素材情報</a
+        >
+        · Microsoft公開テスト素材
+      </p>
     </section>
     <aside class="controls" aria-label="再生条件">
       <h2>再生条件</h2>
       <label
-        >素材<select v-model="material">
-          <option value="sintel">Sintel / Widevine</option>
+        >DRM方式<select :disabled="!ready" v-model="drm">
+          <option value="widevine">Widevine / Chrome・Brave</option>
+          <option value="playready">PlayReady / Windows Edge</option>
+        </select></label
+      >
+      <label
+        >素材<select :disabled="!ready" v-model="material">
+          <option value="sintel">{{ publicMaterialName }}</option>
           <option v-if="data?.localEnabled" value="custom">独自素材</option>
         </select></label
       >
       <template v-if="isCustom"
-        ><label>素材名<input v-model="materialName" maxlength="200" /></label
+        ><label
+          >素材名<input
+            :disabled="!ready"
+            v-model="materialName"
+            maxlength="200" /></label
         ><label
           >動画URL<input
+            :disabled="!ready"
             v-model="manifestUrl"
             type="url"
             autocomplete="off" /></label
         ><label
-          >接続先<select v-model="connectionId">
+          >接続先<select :disabled="!ready" v-model="connectionId">
             <option
-              v-for="item in data?.connections"
+              v-for="item in availableConnections"
               :key="item.id"
               :value="item.id"
             >
@@ -253,15 +298,25 @@ async function saveRecord() {
       <fieldset>
         <legend>保護要件</legend>
         <label class="radio"
-          ><input v-model="mode" type="radio" value="normal" />通常DRM<span
-            >端末の既定の保護条件</span
-          ></label
+          ><input
+            :disabled="!ready"
+            v-model="mode"
+            type="radio"
+            value="normal"
+          />通常DRM<span>{{
+            drm === 'playready' ? 'SL2000の通常条件' : '端末の既定の保護条件'
+          }}</span></label
         ><label class="radio"
           ><input
+            :disabled="!ready"
             v-model="mode"
             type="radio"
             value="hardware"
-          />ハードウェア保護<span>映像・音声にHW_SECURE_ALL</span></label
+          />ハードウェア保護<span>{{
+            drm === 'playready'
+              ? '映像にSL3000・音声は既定条件'
+              : '映像・音声にHW_SECURE_ALL'
+          }}</span></label
         >
       </fieldset>
       <button
@@ -276,6 +331,10 @@ async function saveRecord() {
       </p>
       <p class="muted small">
         条件の変更で再生を停止します。保護要件を満たせない場合、要件を緩めずに失敗を表示します。
+      </p>
+      <p class="muted small">
+        WindowsのChrome・BraveではWidevineのハードウェア保護要求に対応しません。
+        WindowsでSL3000を検証する場合はEdgeでPlayReadyを選択してください。端末の対応も必要です。
       </p>
     </aside>
   </div>
@@ -299,6 +358,7 @@ async function saveRecord() {
             <option value="unknown">未確認</option>
             <option value="chrome">Chrome</option>
             <option value="brave">Brave</option>
+            <option value="edge">Edge</option>
           </select></label
         ><label
           >ブラウザのバージョン<input

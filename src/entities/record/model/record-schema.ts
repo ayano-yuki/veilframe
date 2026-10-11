@@ -19,14 +19,15 @@ export const recordSchema = z
     createdAt: z.iso.datetime(),
     materialName: z.string().trim().min(1).max(200),
     connectionName: z.string().trim().min(1).max(200),
+    drm: z.enum(['widevine', 'playready']),
     mode: z.enum(['normal', 'hardware']),
-    robustness: z.enum(['default', 'HW_SECURE_ALL']),
+    robustness: z.enum(['default', 'HW_SECURE_ALL', 'SL3000']),
     capability: z.enum(['unknown', 'supported', 'unsupported']),
     playback: z.enum(['idle', 'playing', 'failed']),
     environment: z
       .object({
         os: z.string().max(200),
-        browserName: z.enum(['unknown', 'chrome', 'brave']),
+        browserName: z.enum(['unknown', 'chrome', 'brave', 'edge']),
         browserVersion: z.string().max(200),
         device: z.string().max(200),
         browser: z.string().max(500),
@@ -41,7 +42,11 @@ export const recordSchema = z
   .refine(
     (record) =>
       record.robustness ===
-      (record.mode === 'hardware' ? 'HW_SECURE_ALL' : 'default'),
+      (record.mode === 'hardware'
+        ? record.drm === 'playready'
+          ? 'SL3000'
+          : 'HW_SECURE_ALL'
+        : 'default'),
     '再生モードと保護要件が一致しません。',
   )
   .refine(
@@ -53,9 +58,24 @@ export const recordSchema = z
 
 export type CaptureRecord = z.infer<typeof recordSchema>;
 
+const previousRecordObject = z
+  .object(recordSchema.shape)
+  .omit({ drm: true })
+  .extend({
+    robustness: z.enum(['default', 'HW_SECURE_ALL']),
+    environment: recordSchema.shape.environment.extend({
+      browserName: z.enum(['unknown', 'chrome', 'brave']),
+    }),
+  })
+  .strict();
+
+export const previousRecordSchema = previousRecordObject
+  .transform((record): CaptureRecord => ({ ...record, drm: 'widevine' }))
+  .pipe(recordSchema);
+
 export const legacyRecordSchema = z
   .object({
-    ...recordSchema.shape,
+    ...previousRecordObject.shape,
     environment: z
       .object({
         os: z.string().max(200),
@@ -68,6 +88,7 @@ export const legacyRecordSchema = z
   .strict()
   .transform(({ environment, ...record }): CaptureRecord => ({
     ...record,
+    drm: 'widevine',
     environment: {
       os: environment.os,
       device: environment.device,
@@ -78,7 +99,11 @@ export const legacyRecordSchema = z
   }))
   .pipe(recordSchema);
 
-export const storedRecordSchema = z.union([recordSchema, legacyRecordSchema]);
+export const storedRecordSchema = z.union([
+  recordSchema,
+  previousRecordSchema,
+  legacyRecordSchema,
+]);
 export type ImageDescriptor = z.infer<typeof imageSchema>;
 export interface StoredRecord {
   record: CaptureRecord;

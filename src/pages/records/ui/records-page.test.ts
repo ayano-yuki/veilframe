@@ -79,8 +79,10 @@ describe('記録画面', () => {
     const revoke = vi.spyOn(URL, 'revokeObjectURL');
     const first = imageEntry();
     const second = createRecordFixture();
+    second.record.drm = 'playready';
     second.record.mode = 'hardware';
-    second.record.robustness = 'HW_SECURE_ALL';
+    second.record.robustness = 'SL3000';
+    second.record.environment.browserName = 'edge';
     second.record.captureMethod = '';
     mocks.list.mockResolvedValue([first, second]);
     const wrapper = await mountPage();
@@ -91,6 +93,9 @@ describe('記録画面', () => {
     await wrapper.findAll('.record-button')[1]!.trigger('click');
     expect(revoke).toHaveBeenCalledOnce();
     expect(wrapper.get('.detail').text()).toContain('未確認');
+    expect(wrapper.get('.detail').text()).toContain('PlayReady');
+    expect(wrapper.get('.detail').text()).toContain('SL3000');
+    expect(wrapper.get('.detail').text()).toContain('Edge');
     wrapper.unmount();
     revoke.mockRestore();
   });

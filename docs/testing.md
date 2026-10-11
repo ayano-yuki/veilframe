@@ -34,3 +34,5 @@ Playwrightは1440×1000と412×915で3画面、一覧・詳細、削除確認、
 リポジトリ指定後、両ワークフローを既定ブランチへ配置し、同一リポジトリとForkのPRで投稿、更新、期限付きリンク、UI非関連変更時のスキップを確認する。現時点ではGitHub上の実行・コメント投稿は未実施。
 
 Brave対応では種類の手動選択と記録詳細をChromiumのUIテストで確認する。旧IndexedDB・旧ZIPの変換、画像の保持、旧・新形式の混在拒否を単体テストで確認する。Brave実体のCI起動は採用せず、Windows・AndroidのWidevine再生とOS撮影は[運用手順](operations.md)に沿って手動で記録する。
+
+PlayReady追加では、専用キーシステムのSL2000／SL3000の固定、音声robustnessの既定条件、他方式とDRMなしの成功拒否、ライセンスのNuxt URL固定、SOAP/XML転送、DRM別の接続先表示、旧ZIP version 1・2と新version 3を検証する。UIテストにはPlayReadyの手動選択・SL3000・Edgeの記録表示を追加し、PC・モバイル画像を撮影する。再生は引き続きテスト用実装で、Windows EdgeのPlayReady実機再生・OS撮影は手動検証とする。

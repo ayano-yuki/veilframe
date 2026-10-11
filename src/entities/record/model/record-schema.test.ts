@@ -1,10 +1,41 @@
 import { describe, expect, it } from 'vitest';
 import { createRecordFixture } from '../../../../tests/support/create-record-fixture';
 import { createLegacyRecordFixture } from '../../../../tests/support/create-legacy-record-fixture';
+import { createPreviousRecordFixture } from '../../../../tests/support/create-previous-record-fixture';
 import { imageLimit, recordSchema, storedRecordSchema } from './record-schema';
 import { validateEntry } from './validate-entry';
 
 describe('記録の契約', () => {
+  it('PlayReadyのSL3000とWidevineを区別し、旧記録はWidevineとして読む', () => {
+    const entry = createRecordFixture();
+    const playready = {
+      ...entry.record,
+      drm: 'playready',
+      mode: 'hardware',
+      robustness: 'SL3000',
+      environment: { ...entry.record.environment, browserName: 'edge' },
+    };
+    expect(recordSchema.parse(playready).robustness).toBe('SL3000');
+    expect(() =>
+      recordSchema.parse({ ...playready, robustness: 'HW_SECURE_ALL' }),
+    ).toThrow();
+    expect(() =>
+      recordSchema.parse({
+        ...entry.record,
+        robustness: 'SL3000',
+        mode: 'hardware',
+      }),
+    ).toThrow();
+    expect(
+      storedRecordSchema.parse(createPreviousRecordFixture().record).drm,
+    ).toBe('widevine');
+    expect(
+      storedRecordSchema.parse(createLegacyRecordFixture().record).drm,
+    ).toBe('widevine');
+    expect(() =>
+      recordSchema.parse(createPreviousRecordFixture().record),
+    ).toThrow();
+  });
   it('ブラウザ種類は手動値だけを受け付け、旧種類を推測しない', () => {
     const entry = createRecordFixture();
     for (const browserName of ['unknown', 'chrome', 'brave']) {

@@ -33,8 +33,13 @@ describe('接続先API', () => {
     expect(result).toEqual({
       localEnabled: true,
       connections: [
-        { id: 'shaka-widevine', name: 'Shaka 公開テスト' },
-        { id: 'custom', name: '独自接続' },
+        { id: 'shaka-widevine', name: 'Shaka 公開テスト', drm: 'widevine' },
+        {
+          id: 'microsoft-playready',
+          name: 'Microsoft PlayReady 公開テスト',
+          drm: 'playready',
+        },
+        { id: 'custom', name: '独自接続', drm: 'widevine' },
       ],
       defaults: {
         manifestUrl: config.defaultManifestUrl,
@@ -49,7 +54,14 @@ describe('接続先API', () => {
       config.localConnectionsEnabled = enabled;
       expect(await handler(event())).toEqual({
         localEnabled: false,
-        connections: [{ id: 'shaka-widevine', name: 'Shaka 公開テスト' }],
+        connections: [
+          { id: 'shaka-widevine', name: 'Shaka 公開テスト', drm: 'widevine' },
+          {
+            id: 'microsoft-playready',
+            name: 'Microsoft PlayReady 公開テスト',
+            drm: 'playready',
+          },
+        ],
       });
       vi.unstubAllEnvs();
     },

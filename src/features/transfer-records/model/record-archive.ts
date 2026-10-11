@@ -5,6 +5,7 @@ import {
   expandedLimit,
   legacyRecordSchema,
   recordSchema,
+  previousRecordSchema,
   type StoredRecord,
 } from '@fsd/entities/record/model/record-schema';
 import { validateEntry } from '@fsd/entities/record/model/validate-entry';
@@ -17,7 +18,13 @@ const archiveSchema = z.discriminatedUnion('version', [
     })
     .strict(),
   z
-    .object({ version: z.literal(2), records: z.array(recordSchema).max(1000) })
+    .object({
+      version: z.literal(2),
+      records: z.array(previousRecordSchema).max(1000),
+    })
+    .strict(),
+  z
+    .object({ version: z.literal(3), records: z.array(recordSchema).max(1000) })
     .strict(),
 ]);
 
@@ -26,7 +33,7 @@ export async function exportRecords(
 ): Promise<Uint8Array> {
   const valid = entries.map(validateEntry);
   const document = archiveSchema.parse({
-    version: 2,
+    version: 3,
     records: valid.map((entry) => entry.record),
   });
   const files: Record<string, Uint8Array> = {

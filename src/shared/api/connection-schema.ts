@@ -4,6 +4,7 @@ export const connectionSchema = z
   .object({
     id: z.string().regex(/^[a-z0-9-]{1,80}$/),
     name: z.string().min(1).max(200),
+    drm: z.enum(['widevine', 'playready']).default('widevine'),
     url: z
       .url()
       .refine(

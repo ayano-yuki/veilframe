@@ -5,6 +5,7 @@ import { createLicenseTransport } from './create-license-transport';
 const connection = {
   id: 'test',
   name: 'Test',
+  drm: 'widevine' as const,
   url: 'https://example.test/license',
   headers: { Authorization: 'private' },
 };
@@ -13,6 +14,29 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe('ライセンス転送', () => {
+  it('PlayReadyのXMLとSOAPActionをサーバーで設定し、本文を変更しない', async () => {
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValue(new Response('<license/>'));
+    const body = new TextEncoder().encode('<challenge/>');
+    await createLicenseTransport(fetcher).send(
+      { ...connection, drm: 'playready' },
+      body,
+    );
+    expect(fetcher).toHaveBeenCalledWith(
+      connection.url,
+      expect.objectContaining({
+        body,
+        redirect: 'error',
+        headers: {
+          Authorization: 'private',
+          'Content-Type': 'text/xml; charset=utf-8',
+          SOAPAction:
+            '"http://schemas.microsoft.com/DRM/2007/03/protocols/AcquireLicense"',
+        },
+      }),
+    );
+  });
   it('認証情報をサーバーで付与し、リダイレクトを拒否してバイナリを返す', async () => {
     const fetcher = vi
       .fn<typeof fetch>()

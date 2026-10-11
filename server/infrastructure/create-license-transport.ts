@@ -20,7 +20,13 @@ export function createLicenseTransport(
           signal: controller.signal,
           headers: {
             ...connection.headers,
-            'Content-Type': 'application/octet-stream',
+            ...(connection.drm === 'playready'
+              ? {
+                  'Content-Type': 'text/xml; charset=utf-8',
+                  SOAPAction:
+                    '"http://schemas.microsoft.com/DRM/2007/03/protocols/AcquireLicense"',
+                }
+              : { 'Content-Type': 'application/octet-stream' }),
           },
           body: new Uint8Array(body),
         });

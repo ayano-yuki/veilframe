@@ -61,3 +61,20 @@ Widevineの許可は利用者がブラウザ設定で行う。アプリが自動
 Windows・Androidでそれぞれ、ChromeとBraveの通常・保護モードを比較する。記録のブラウザ種類を手動で選び、実際のブラウザバージョンを入力する。BraveではWidevine無効時の失敗と有効化後の結果もメモへ記載する。通信失敗は開発者ツールで素材・ライセンス・証明書の要求を確認し、Shieldsなどの設定を変更した場合はメモに条件を残す。
 
 ブラウザごとにIndexedDBは別なので、比較にはZIPを移す。UIのChromium CIテストでBraveの種類選択・記録表示を検証するが、Brave本体のDRM・OS撮影は実機の手動検証とする。Brave実機での再生は現時点で未検証。
+
+## Windows EdgeでPlayReadyを検証する
+
+Windows 11のEdgeでアプリを開き、DRM方式を「PlayReady / Windows Edge」にする。公開素材「Tears of Steel」を通常モードで再生し、映像と音声を確認する。次にハードウェア保護へ切り替えてSL3000で再生し、OS標準機能で撮影する。ブラウザ種類はEdge、バージョンは実際の値を手動入力し、通常・保護それぞれの記録を保存する。
+
+SL3000には対応ハードウェアが必要。Edgeでも非対応や失敗の場合があり、映像が黒く撮影されることは保証しない。非対応は結果として記録し、通常モードへ自動切り替えしない。[Microsoftのキーシステム仕様](https://learn.microsoft.com/en-us/playready/overview/key-system-strings)
+
+独自のPlayReady素材はローカルでのみ設定する。既存のNuxt環境変数を使い、接続情報のdrmをplayreadyにする。画面でDRM方式と独自素材を選び、同方式の許可済み接続先を手動選択する。
+
+```dotenv
+NUXT_LOCAL_CONNECTIONS_ENABLED=true
+NUXT_CONNECTIONS_JSON=[{"id":"my-playready","name":"独自PlayReady","drm":"playready","url":"https://license.example.com/playready","headers":{"Authorization":"Bearer YOUR_TOKEN"}}]
+```
+
+動画にはPlayReadyの暗号化・初期化情報が必要で、Widevine専用素材を流用するだけでは再生できない。Widevineの独自接続と共存する場合は同じJSON配列に別IDで設定する。旧設定はdrm省略時にwidevineとして解釈される。公開Vercelでは独自設定は引き続き拒否する。
+
+ZIPは新規出力がversion 3になった。version 1・2も新アプリへ取り込めるが、version 3を旧アプリへ取り込むことはできない。比較先の端末でもアプリを更新する。

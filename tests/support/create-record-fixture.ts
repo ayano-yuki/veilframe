@@ -7,6 +7,7 @@ export function createRecordFixture(): StoredRecord {
       createdAt: '2026-10-12T00:00:00.000Z',
       materialName: 'Sintel / Widevine',
       connectionName: 'Shaka 公開テスト',
+      drm: 'widevine',
       mode: 'normal',
       robustness: 'default',
       capability: 'supported',

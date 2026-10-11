@@ -99,7 +99,12 @@ async function removeRecord() {
     message.value = '記録と添付画像を削除しました。';
   });
 }
-const browserNames = { unknown: '未確認', chrome: 'Chrome', brave: 'Brave' };
+const browserNames = {
+  unknown: '未確認',
+  chrome: 'Chrome',
+  brave: 'Brave',
+  edge: 'Edge',
+};
 const observations = {
   visible: '映像が写る',
   black: '黒くなる',
@@ -161,6 +166,10 @@ const observations = {
         <dd>{{ selected.record.playback }}</dd>
         <dt>対応確認</dt>
         <dd>{{ selected.record.capability }}</dd>
+        <dt>DRM方式</dt>
+        <dd>
+          {{ selected.record.drm === 'playready' ? 'PlayReady' : 'Widevine' }}
+        </dd>
         <dt>要求保護要件</dt>
         <dd>{{ selected.record.robustness }}</dd>
         <dt>環境</dt>

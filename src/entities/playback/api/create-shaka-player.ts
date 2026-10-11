@@ -10,16 +10,46 @@ export async function createShakaPlayer(): Promise<PlaybackPort> {
   return {
     async load(video, request) {
       await player.attach(video);
+      const playready = request.drm === 'playready';
+      const keySystem = playready
+        ? request.mode === 'hardware'
+          ? 'com.microsoft.playready.recommendation.3000'
+          : 'com.microsoft.playready.recommendation'
+        : 'com.widevine.alpha';
       const robustness = request.mode === 'hardware' ? ['HW_SECURE_ALL'] : [];
+      const networking = player.getNetworkingEngine();
+      if (!networking) {
+        throw new Error('unsupported');
+      }
+      networking.registerRequestFilter((type, message) => {
+        if (type === shaka.net.NetworkingEngine.RequestType.LICENSE) {
+          if (message.drmInfo?.keySystem !== keySystem) {
+            throw new Error('unsupported');
+          }
+          message.uris = [
+            new URL(request.licenseUrl, window.location.href).href,
+          ];
+        }
+      });
       player.configure({
         drm: {
-          servers: { 'com.widevine.alpha': request.licenseUrl },
-          preferredKeySystems: ['com.widevine.alpha'],
+          servers: {
+            [keySystem]: request.licenseUrl,
+            ...(playready
+              ? { 'com.microsoft.playready': request.licenseUrl }
+              : {}),
+          },
+          preferredKeySystems: [keySystem],
+          keySystemsMapping: playready
+            ? { 'com.microsoft.playready': keySystem }
+            : {},
           advanced: {
-            'com.widevine.alpha': {
-              videoRobustness: robustness,
-              audioRobustness: robustness,
-              serverCertificateUri: request.serverCertificateUrl ?? '',
+            [keySystem]: {
+              videoRobustness: playready ? [] : robustness,
+              audioRobustness: playready ? [] : robustness,
+              serverCertificateUri: playready
+                ? ''
+                : (request.serverCertificateUrl ?? ''),
             },
           },
           retryParameters: { maxAttempts: 1, timeout: 15000 },
@@ -38,6 +68,9 @@ export async function createShakaPlayer(): Promise<PlaybackPort> {
           throw new Error('unsupported');
         }
         throw error;
+      }
+      if (player.drmInfo()?.keySystem !== keySystem) {
+        throw new Error('unsupported');
       }
       await video.play();
     },

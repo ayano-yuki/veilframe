@@ -17,7 +17,7 @@ export default defineEventHandler((event) => {
   setResponseHeader(event, 'Cache-Control', 'no-store');
   return {
     localEnabled,
-    connections: connections.map(({ id, name }) => ({ id, name })),
+    connections: connections.map(({ id, name, drm }) => ({ id, name, drm })),
     ...(localEnabled
       ? {
           defaults: {
