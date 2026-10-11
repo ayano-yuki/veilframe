@@ -1,0 +1,50 @@
+{
+  "name": "veilframe",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=24.16.0 <25",
+    "pnpm": "11.9.0"
+  },
+  "scripts": {
+    "dev": "nuxt dev --host 0.0.0.0",
+    "build": "node --version && nuxt build",
+    "preview": "nuxt preview",
+    "prepare": "nuxt prepare",
+    "typecheck": "nuxt typecheck",
+    "lint": "oxlint --deny-warnings && node scripts/check-architecture.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "check": "pnpm lint && pnpm typecheck && pnpm format:check && pnpm test:coverage"
+  },
+  "dependencies": {
+    "h3": "1.15.11",
+    "@pinia/nuxt": "1.0.2",
+    "fflate": "0.8.3",
+    "idb": "8.0.4",
+    "nuxt": "4.6.1",
+    "pinia": "4.0.3",
+    "shaka-player": "5.2.13",
+    "vue": "3.5.43",
+    "zod": "4.6.6"
+  },
+  "devDependencies": {
+    "@types/node": "24.19.2",
+    "fake-indexeddb": "6.2.5",
+    "@nuxt/test-utils": "4.3.3",
+    "@playwright/test": "1.64.0",
+    "@vitest/coverage-v8": "5.0.3",
+    "@vue/test-utils": "2.5.1",
+    "happy-dom": "20.14.6",
+    "oxlint": "1.87.0",
+    "prettier": "3.9.10",
+    "typescript": "6.0.3",
+    "vitest": "5.0.3",
+    "vue-tsc": "3.3.13"
+  }
+}

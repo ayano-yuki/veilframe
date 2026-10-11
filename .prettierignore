@@ -1,0 +1,9 @@
+node_modules
+.nuxt
+.output
+.vercel
+coverage
+playwright-report
+test-results
+screenshots
+pnpm-lock.yaml
