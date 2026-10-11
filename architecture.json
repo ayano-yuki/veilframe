@@ -1,0 +1,31 @@
+{
+  "layers": ["app", "pages", "widgets", "features", "entities", "shared"],
+  "publicFiles": [
+    "src/pages/playback/ui/PlaybackPage.vue",
+    "src/pages/records/ui/RecordsPage.vue",
+    "src/pages/connections/ui/ConnectionsPage.vue",
+    "src/features/play-media/model/create-playback-controller.ts",
+    "src/features/record-capture/model/use-capture-draft.ts",
+    "src/features/transfer-records/model/record-archive.ts",
+    "src/entities/playback/model/playback-port.ts",
+    "src/entities/playback/api/create-shaka-player.ts",
+    "src/entities/record/model/record-schema.ts",
+    "src/entities/record/model/validate-entry.ts",
+    "src/entities/record/api/record-repository.ts",
+    "src/entities/record/api/create-record-repository.ts",
+    "src/shared/api/connection-schema.ts",
+    "src/shared/lib/download-blob.ts",
+    "src/shared/ui/base.css"
+  ],
+  "frameworkNames": [
+    "app/app.vue",
+    "app/pages/index.vue",
+    "app/pages/connections.vue",
+    "app/pages/records.vue",
+    "nuxt.config.ts",
+    "vitest.config.ts",
+    "playwright.config.ts",
+    "server/api/connections.get.ts",
+    "server/api/license/[id].post.ts"
+  ]
+}
