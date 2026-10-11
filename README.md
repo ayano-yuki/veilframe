@@ -12,6 +12,7 @@ Node.jsは`.node-version`、pnpmは`package.json`の指定に合わせます。
 
 - [仕様と操作](docs/specification.md)
 - [実装と静的検査](docs/architecture.md)
+- [ハードウェア保護要求の仕組みと実装](docs/hardware-protection.md)
 - [ローカルHTTPS・実機検証・Vercel](docs/operations.md)
 - [テストとPRスクリーンショットCI](docs/testing.md)
 - [インターフェイスレビュー](docs/interface-review.md)
