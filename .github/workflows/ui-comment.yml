@@ -1,0 +1,45 @@
+name: UI screenshot comment
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+
+permissions:
+  actions: read
+  contents: read
+  pull-requests: write
+
+jobs:
+  comment:
+    if: github.event.workflow_run.event == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      # No checkout: this job never executes PR code or downloads artifacts.
+      - uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            if (run.repository.full_name !== `${context.repo.owner}/${context.repo.repo}` || run.path !== '.github/workflows/ci.yml') return;
+            const artifacts = await github.paginate(github.rest.actions.listWorkflowRunArtifacts, {
+              ...context.repo, run_id: run.id, per_page: 100,
+            });
+            const artifact = artifacts.find(item => item.name === 'ui-screenshots' && !item.expired);
+            if (!artifact) return;
+            const pulls = await github.paginate(github.rest.repos.listPullRequestsAssociatedWithCommit, {
+              ...context.repo, commit_sha: run.head_sha, per_page: 100,
+            });
+            for (const pull of pulls) {
+              if (pull.state !== 'open' || pull.base.repo.full_name !== run.repository.full_name || pull.head.sha !== run.head_sha) continue;
+              const marker = '<!-- veilframe-ui -->';
+              const url = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${run.id}/artifacts/${artifact.id}`;
+              const body = `${marker}\nPC・モバイルのUI検証画像：[スクリーンショットとレポート](${url})\n\n対象コミット：\`${run.head_sha}\`\nCI結果：${run.conclusion}\n画像は14日間保存されます。DRM再生はテスト用実装で、実機のキャプチャ保護を示すものではありません。`;
+              const comments = await github.paginate(github.rest.issues.listComments, {
+                ...context.repo, issue_number: pull.number, per_page: 100,
+              });
+              const existing = comments.find(item => item.user?.login === 'github-actions[bot]' && item.body?.includes(marker));
+              if (existing) {
+                await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+              } else {
+                await github.rest.issues.createComment({ ...context.repo, issue_number: pull.number, body });
+              }
+            }

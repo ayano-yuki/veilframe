@@ -1,0 +1,72 @@
+name: CI
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm check
+      - run: pnpm build
+
+  ui:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Detect UI changes
+        id: changes
+        uses: actions/github-script@373c709c69115d41ff229c7e5df9f8788daa9553 # v9
+        with:
+          script: |
+            const files = await github.paginate(github.rest.pulls.listFiles, {
+              ...context.repo, pull_number: context.issue.number, per_page: 100,
+            });
+            const relevant = /^(app\/|src\/|server\/|public\/|tests\/|scripts\/|\.github\/workflows\/|nuxt\.config\.|playwright\.config\.|vitest\.config\.|architecture\.json$|package\.json$|pnpm-lock\.yaml$|pnpm-workspace\.yaml$|\.node-version$|\.npmrc$|vercel\.json$)/;
+            core.setOutput('changed', files.length >= 3000 || files.some(file => relevant.test(file.filename) || (file.previous_filename && relevant.test(file.previous_filename))));
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        if: steps.changes.outputs.changed == 'true'
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@f520eceda224fe1a4aed5a2a27a194379a409996 # v6
+        if: steps.changes.outputs.changed == 'true'
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        if: steps.changes.outputs.changed == 'true'
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+        if: steps.changes.outputs.changed == 'true'
+      - run: pnpm exec playwright install --with-deps chromium
+        if: steps.changes.outputs.changed == 'true'
+      - name: Install Japanese fonts
+        if: steps.changes.outputs.changed == 'true'
+        run: sudo apt-get install -y fonts-noto-cjk
+      - run: pnpm test:e2e
+        if: steps.changes.outputs.changed == 'true'
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        if: always() && steps.changes.outputs.changed == 'true'
+        with:
+          name: ui-screenshots
+          path: |
+            test-results/**/*.png
+            playwright-report/
+          if-no-files-found: error
+          retention-days: 14
