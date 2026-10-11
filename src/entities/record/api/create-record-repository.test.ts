@@ -1,9 +1,38 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { Blob as NodeBlob } from 'node:buffer';
 import { createRecordFixture } from '../../../../tests/support/create-record-fixture';
+import { createLegacyRecordFixture } from '../../../../tests/support/create-legacy-record-fixture';
 import { createRecordRepository } from './create-record-repository';
 
 afterEach(() => vi.restoreAllMocks());
 describe('IndexedDB実装', () => {
+  it('既存DBの旧記録と画像を保持して新形式として読み込む', async () => {
+    const name = crypto.randomUUID();
+    const repository = createRecordRepository(name);
+    await repository.close();
+    const legacy = createLegacyRecordFixture();
+    const id = crypto.randomUUID();
+    legacy.record.images = [{ id, type: 'image/png', size: 3 }];
+    legacy.images[id] = new NodeBlob(['png'], { type: 'image/png' });
+    const database = await new Promise<IDBDatabase>((resolve, reject) => {
+      const request = indexedDB.open(name, 1);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    await new Promise<void>((resolve, reject) => {
+      const transaction = database.transaction('records', 'readwrite');
+      transaction.objectStore('records').put(legacy);
+      transaction.oncomplete = () => resolve();
+      transaction.onerror = () => reject(transaction.error);
+    });
+    database.close();
+    const reopened = createRecordRepository(name);
+    const entries = await reopened.list();
+    expect(entries[0]?.record.environment.browserName).toBe('unknown');
+    expect(entries[0]?.record.environment.browserVersion).toBe('140');
+    expect(await entries[0]?.images[id]?.text()).toBe('png');
+    await reopened.close();
+  });
   it('保存・新しい順の一覧・削除・再接続を提供する', async () => {
     const name = crypto.randomUUID();
     const repository = createRecordRepository(name);

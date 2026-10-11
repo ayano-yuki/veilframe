@@ -33,7 +33,7 @@ Androidから`https://192.168.1.10:3000`を開く。証明書警告が出る場�
 
 ## 実機の手順
 
-1. OS・Chrome・端末・GPU設定・接続画面を確認する。
+1. OS・ブラウザ種類・バージョン・端末・GPU設定・接続画面を確認する。
 2. 通常DRMを再生し、初回再生の結果を確認する。
 3. 標準機能で撮影し、映像部分の目視結果とキャプチャ方法を入力する。
 4. 画像を添付し記録を保存する。
@@ -49,3 +49,15 @@ GitHubリポジトリが決まった後、VercelでNuxtプロジェクトとし�
 VercelはNode.jsのメジャー版だけを固定でき、マイナー・パッチは更新される。ローカルとCIは24.16.0、Vercelでは24.16.0以上25未満を許可する。ビルドコマンドが実際のバージョンを出力する。[Vercel公式仕様](https://vercel.com/docs/functions/runtimes/node-js/node-js-versions)
 
 VercelのProductionとPreviewをそれぞれ確認し、`/api/connections`に公開テスト接続だけが含まれること、独自素材入力が表示されないこと、通常モードの実機再生を確認する。GitHub連携・デプロイ・実機検証は、コードのローカル検証とは別の実施記録を残す。
+
+## Brave（Windows・Android）
+
+WindowsではBraveの設定 → 拡張機能 → Widevine（`brave://settings/extensions`）を有効にする。再起動を求められたら従い、ページを再読み込みする。[Brave公式：DRM再生](https://support.brave.app/hc/en-us/articles/360023851591-How-do-I-view-DRM-protected-content)
+
+Androidでは設定 → メディア → Widevine DRMを有効にする。初回の許可画面から有効化する場合も、要求された再起動を行う。[Brave公式：AndroidのWidevine](https://support.brave.app/hc/en-us/articles/17428756610061-How-do-I-enable-Widevine-DRM-on-Android)
+
+Widevineの許可は利用者がブラウザ設定で行う。アプリが自動変更する機能はない。Chrome限定のUA判定を設けず、ShakaとEMEの実際の再生結果を使う。Widevineが有効でもハードウェア保護モードが成功するとは限らず、保護要件を緩和しない。
+
+Windows・Androidでそれぞれ、ChromeとBraveの通常・保護モードを比較する。記録のブラウザ種類を手動で選び、実際のブラウザバージョンを入力する。BraveではWidevine無効時の失敗と有効化後の結果もメモへ記載する。通信失敗は開発者ツールで素材・ライセンス・証明書の要求を確認し、Shieldsなどの設定を変更した場合はメモに条件を残す。
+
+ブラウザごとにIndexedDBは別なので、比較にはZIPを移す。UIのChromium CIテストでBraveの種類選択・記録表示を検証するが、Brave本体のDRM・OS撮影は実機の手動検証とする。Brave実機での再生は現時点で未検証。

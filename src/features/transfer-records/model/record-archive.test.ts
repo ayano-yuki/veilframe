@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { strToU8, zipSync } from 'fflate';
+import { strFromU8, strToU8, unzipSync, zipSync } from 'fflate';
 import { createRecordFixture } from '../../../../tests/support/create-record-fixture';
+import { createLegacyRecordFixture } from '../../../../tests/support/create-legacy-record-fixture';
 import {
   archiveLimit,
   expandedLimit,
@@ -9,6 +10,42 @@ import {
 import { exportRecords, importRecords } from './record-archive';
 
 describe('ZIPの交換', () => {
+  it('旧ZIPの種類を推測せず変換し、新ZIPはversion 2として出力する', async () => {
+    const legacy = createLegacyRecordFixture();
+    const id = crypto.randomUUID();
+    legacy.record.images = [{ id, type: 'image/png', size: 3 }];
+    const restored = importRecords(
+      zipSync({
+        'records.json': strToU8(
+          JSON.stringify({ version: 1, records: [legacy.record] }),
+        ),
+        [`images/${legacy.record.id}/${id}`]: strToU8('png'),
+      }),
+    );
+    expect(restored[0]?.record.environment.browserName).toBe('unknown');
+    expect(restored[0]?.record.environment.browserVersion).toBe('140');
+    expect(await restored[0]?.images[id]?.text()).toBe('png');
+    const document = JSON.parse(
+      strFromU8(unzipSync(await exportRecords(restored))['records.json']!),
+    );
+    expect(document.version).toBe(2);
+    expect(document.records[0].environment).not.toHaveProperty('chrome');
+    for (const [version, record] of [
+      [1, createRecordFixture().record],
+      [2, legacy.record],
+      [3, legacy.record],
+    ]) {
+      expect(() =>
+        importRecords(
+          zipSync({
+            'records.json': strToU8(
+              JSON.stringify({ version, records: [record] }),
+            ),
+          }),
+        ),
+      ).toThrow();
+    }
+  });
   it('画像付き記録を往復し、動画URLや認証情報を含めない', async () => {
     const entry = createRecordFixture();
     const id = crypto.randomUUID();
@@ -38,7 +75,7 @@ describe('ZIPの交換', () => {
         zipSync({
           'records.json': strToU8(
             JSON.stringify({
-              version: 1,
+              version: 2,
               records: [entry.record, entry.record],
             }),
           ),
@@ -52,7 +89,7 @@ describe('ZIPの交換', () => {
       importRecords(
         zipSync({
           'records.json': strToU8(
-            JSON.stringify({ version: 1, records: [entry.record] }),
+            JSON.stringify({ version: 2, records: [entry.record] }),
           ),
         }),
       ),
@@ -67,7 +104,7 @@ describe('ZIPの交換', () => {
     expect(() =>
       importRecords(
         zipSync({
-          'records.json': strToU8(JSON.stringify({ version: 1, records: [] })),
+          'records.json': strToU8(JSON.stringify({ version: 2, records: [] })),
           [name]: strToU8('extra'),
         }),
       ),

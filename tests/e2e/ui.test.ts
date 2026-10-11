@@ -1,4 +1,5 @@
 import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import { createLegacyRecordFixture } from '../support/create-legacy-record-fixture';
 
 async function screenshot(page: Page, info: TestInfo, name: string) {
   await page.screenshot({
@@ -22,6 +23,8 @@ test('再生・記録・詳細・削除・接続設定', async ({ page }, info) 
   await page.getByRole('button', { name: '再生を開始' }).click();
   await page.getByLabel('OS', { exact: true }).fill('Windows 11');
   await page.getByLabel('端末名').fill('検証端末');
+  await page.getByLabel('ブラウザの種類').selectOption('brave');
+  await page.getByLabel('ブラウザのバージョン').fill('1.84');
   await page.getByLabel('映像部分の目視結果').selectOption('black');
   await page.getByLabel('キャプチャ方法').fill('標準キャプチャ');
   await page
@@ -38,6 +41,12 @@ test('再生・記録・詳細・削除・接続設定', async ({ page }, info) 
   await screenshot(page, info, 'records-list');
   await page.getByRole('button', { name: /Sintel/ }).click();
   await expect(page.getByRole('region', { name: '記録詳細' })).toBeVisible();
+  await expect(page.getByRole('region', { name: '記録詳細' })).toContainText(
+    'Brave',
+  );
+  await expect(page.getByRole('region', { name: '記録詳細' })).toContainText(
+    '1.84',
+  );
   await screenshot(page, info, 'record-detail');
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'ZIPでエクスポート' }).click();
@@ -91,4 +100,35 @@ test('公開接続情報には秘密とURLを含めない', async ({ request }) 
   expect(
     (await request.post('/api/license/arbitrary', { data: 'test' })).status(),
   ).toBe(404);
+});
+
+test('旧IndexedDB記録を再読み込み後も表示できる', async ({ page }) => {
+  await page.goto('/records');
+  await expect(
+    page.getByText('まだ記録はありません。', { exact: false }),
+  ).toBeVisible();
+  const entry = createLegacyRecordFixture();
+  entry.record.materialName = '旧形式の記録';
+  await page.evaluate(
+    async (legacy) => {
+      const database = await new Promise<IDBDatabase>((resolve, reject) => {
+        const request = indexedDB.open('veilframe-records', 1);
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      await new Promise<void>((resolve, reject) => {
+        const transaction = database.transaction('records', 'readwrite');
+        transaction.objectStore('records').put(legacy);
+        transaction.oncomplete = () => resolve();
+        transaction.onerror = () => reject(transaction.error);
+      });
+      database.close();
+    },
+    { ...entry, images: {} },
+  );
+  await page.reload();
+  await page.getByRole('button', { name: /旧形式の記録/ }).click();
+  await expect(page.getByRole('region', { name: '記録詳細' })).toContainText(
+    '未確認 / 140',
+  );
 });

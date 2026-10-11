@@ -7,7 +7,8 @@ export const useCaptureDraft = defineStore('capture-draft', {
     captureMethod: '',
     memo: '',
     os: '',
-    chrome: '',
+    browserName: 'unknown' as CaptureRecord['environment']['browserName'],
+    browserVersion: '',
     device: '',
   }),
 });

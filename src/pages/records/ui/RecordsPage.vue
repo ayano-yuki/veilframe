@@ -99,6 +99,7 @@ async function removeRecord() {
     message.value = '記録と添付画像を削除しました。';
   });
 }
+const browserNames = { unknown: '未確認', chrome: 'Chrome', brave: 'Brave' };
 const observations = {
   visible: '映像が写る',
   black: '黒くなる',
@@ -165,7 +166,8 @@ const observations = {
         <dt>環境</dt>
         <dd>
           {{ selected.record.environment.os }} /
-          {{ selected.record.environment.chrome }} /
+          {{ browserNames[selected.record.environment.browserName] }} /
+          {{ selected.record.environment.browserVersion }} /
           {{ selected.record.environment.device }}
         </dd>
         <dt>ブラウザ情報</dt>

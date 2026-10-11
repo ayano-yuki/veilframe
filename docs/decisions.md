@@ -72,7 +72,7 @@
 - 専用Skillはリポジトリ内skillsに配置し、AGENTS.mdから参照する。
 - 未確定の技術選定もGrill-me形式で一問ずつ確認する。
 
-## 追加の合意（質問56〜74）
+## 追加の合意
 
 - SSRを使用し、ブラウザ専用処理をクライアントに分離する。
 - 条件変更で停止・破棄・結果リセットし、明示操作で再生する。
@@ -89,3 +89,10 @@
 - コンポーネントテストはHappy DOM、計測はV8、IndexedDBテストはfake-indexeddb。
 - AndroidからのローカルHTTPSはmkcert方式。
 - Node.jsはローカル・CIで24.16.0、Vercelは24.16.0以上25未満を許可し実バージョンを記録する。
+
+## Brave対応の合意
+
+- Windows・AndroidのBraveをChromeと同じ検証対象へ追加する。
+- ブラウザの種類とバージョンを別項目にし、種類はChrome・Brave・未確認から手動選択する。
+- 既存記録と旧ZIPを読み込めるようにする。旧種類は推測せず未確認とする。
+- CIは既存のChromium UIテストを維持する。Brave実体のWidevine再生とOS撮影はWindows・Androidで手動検証する。

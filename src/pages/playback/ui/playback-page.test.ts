@@ -74,7 +74,8 @@ describe('再生・検証画面', () => {
     for (const input of wrapper.findAll('form input:not([type="file"])')) {
       await input.setValue('検証値');
     }
-    await wrapper.get('form select').setValue('black');
+    await wrapper.findAll('form select')[0]!.setValue('brave');
+    await wrapper.findAll('form select')[1]!.setValue('black');
     await wrapper.get('textarea').setValue('実機のメモ');
     expect(wrapper.get('[role="status"]').text()).toBe('再生中');
     await attach(wrapper, [
@@ -85,6 +86,9 @@ describe('再生・検証画面', () => {
     const entry = mocks.save.mock.calls[0]![0] as StoredRecord;
     expect(entry.record.playback).toBe('playing');
     expect(entry.record.capability).toBe('supported');
+    expect(entry.record.environment.browserName).toBe('brave');
+    expect(entry.record.environment.browserVersion).toBe('検証値');
+    expect(entry.record.observation).toBe('black');
     expect(entry.record.images).toHaveLength(1);
     expect(entry.record).not.toHaveProperty('manifestUrl');
     expect(wrapper.findAll('li')).toHaveLength(0);

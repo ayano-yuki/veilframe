@@ -3,21 +3,30 @@ import { z } from 'zod';
 import {
   archiveLimit,
   expandedLimit,
+  legacyRecordSchema,
   recordSchema,
   type StoredRecord,
 } from '@fsd/entities/record/model/record-schema';
 import { validateEntry } from '@fsd/entities/record/model/validate-entry';
 
-const archiveSchema = z
-  .object({ version: z.literal(1), records: z.array(recordSchema).max(1000) })
-  .strict();
+const archiveSchema = z.discriminatedUnion('version', [
+  z
+    .object({
+      version: z.literal(1),
+      records: z.array(legacyRecordSchema).max(1000),
+    })
+    .strict(),
+  z
+    .object({ version: z.literal(2), records: z.array(recordSchema).max(1000) })
+    .strict(),
+]);
 
 export async function exportRecords(
   entries: StoredRecord[],
 ): Promise<Uint8Array> {
   const valid = entries.map(validateEntry);
   const document = archiveSchema.parse({
-    version: 1,
+    version: 2,
     records: valid.map((entry) => entry.record),
   });
   const files: Record<string, Uint8Array> = {

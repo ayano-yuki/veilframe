@@ -26,7 +26,8 @@ export const recordSchema = z
     environment: z
       .object({
         os: z.string().max(200),
-        chrome: z.string().max(200),
+        browserName: z.enum(['unknown', 'chrome', 'brave']),
+        browserVersion: z.string().max(200),
         device: z.string().max(200),
         browser: z.string().max(500),
       })
@@ -51,6 +52,33 @@ export const recordSchema = z
   );
 
 export type CaptureRecord = z.infer<typeof recordSchema>;
+
+export const legacyRecordSchema = z
+  .object({
+    ...recordSchema.shape,
+    environment: z
+      .object({
+        os: z.string().max(200),
+        chrome: z.string().max(200),
+        device: z.string().max(200),
+        browser: z.string().max(500),
+      })
+      .strict(),
+  })
+  .strict()
+  .transform(({ environment, ...record }): CaptureRecord => ({
+    ...record,
+    environment: {
+      os: environment.os,
+      device: environment.device,
+      browser: environment.browser,
+      browserName: 'unknown',
+      browserVersion: environment.chrome,
+    },
+  }))
+  .pipe(recordSchema);
+
+export const storedRecordSchema = z.union([recordSchema, legacyRecordSchema]);
 export type ImageDescriptor = z.infer<typeof imageSchema>;
 export interface StoredRecord {
   record: CaptureRecord;

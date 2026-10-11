@@ -1,6 +1,6 @@
 # veilframe
 
-Windows・AndroidのChromeで、Widevineの通常再生とハードウェア保護要求を比較するNuxtアプリです。実機で撮影した画像と検証結果をブラウザ内に保存できます。
+Windows・AndroidのChrome・Braveで、Widevineの通常再生とハードウェア保護要求を比較するNuxtアプリです。実機で撮影した画像と検証結果をブラウザ内に保存できます。
 
 ```sh
 corepack enable

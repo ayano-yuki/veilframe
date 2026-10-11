@@ -13,7 +13,8 @@ export function createRecordFixture(): StoredRecord {
       playback: 'playing',
       environment: {
         os: 'Windows 11',
-        chrome: '140',
+        browserName: 'chrome',
+        browserVersion: '140',
         device: '検証PC',
         browser: 'Chrome',
       },

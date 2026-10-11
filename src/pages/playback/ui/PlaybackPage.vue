@@ -151,7 +151,8 @@ async function saveRecord() {
               : 'idle',
         environment: {
           os: draft.os,
-          chrome: draft.chrome,
+          browserName: draft.browserName,
+          browserVersion: draft.browserVersion,
           device: draft.device,
           browser: browser.value,
         },
@@ -181,7 +182,7 @@ async function saveRecord() {
       <p class="eyebrow">01 / playback experiment</p>
       <h1>見える映像、その先を確かめる。</h1>
     </div>
-    <span class="protocol">WIDEVINE / CHROME</span>
+    <span class="protocol">WIDEVINE / CHROME + BRAVE</span>
   </div>
   <div class="workspace">
     <section class="player-area" aria-label="動画プレイヤー">
@@ -294,8 +295,14 @@ async function saveRecord() {
             maxlength="200"
             placeholder="例：Windows 11 / Android 15" /></label
         ><label
-          >Chromeのバージョン<input
-            v-model="draft.chrome"
+          >ブラウザの種類<select v-model="draft.browserName">
+            <option value="unknown">未確認</option>
+            <option value="chrome">Chrome</option>
+            <option value="brave">Brave</option>
+          </select></label
+        ><label
+          >ブラウザのバージョン<input
+            v-model="draft.browserVersion"
             maxlength="200"
             placeholder="不明な場合は空欄" /></label
         ><label>端末名<input v-model="draft.device" maxlength="200" /></label
@@ -331,6 +338,18 @@ async function saveRecord() {
       <label class="memo"
         >メモ<textarea v-model="draft.memo" maxlength="5000" />
       </label>
+      <p class="muted small">
+        Braveでは設定からWidevineを有効にしてください。
+        <a
+          href="https://support.brave.app/hc/en-us/articles/360023851591-How-do-I-view-DRM-protected-content"
+          >Windowsの手順</a
+        >
+        /
+        <a
+          href="https://support.brave.app/hc/en-us/articles/17428756610061-How-do-I-enable-Widevine-DRM-on-Android"
+          >Androidの手順</a
+        >
+      </p>
       <p class="muted small">
         ブラウザ情報：{{ browser
         }}<br />動画URL・ライセンス認証情報は記録に含めません。

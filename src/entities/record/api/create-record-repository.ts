@@ -1,5 +1,6 @@
 import { openDB, type DBSchema } from 'idb';
 import type { StoredRecord } from '../model/record-schema';
+import { storedRecordSchema } from '../model/record-schema';
 import { validateEntry } from '../model/validate-entry';
 import type { RecordRepository } from './record-repository';
 
@@ -17,9 +18,14 @@ export function createRecordRepository(
   });
   return {
     async list() {
-      return (await (await database).getAll('records')).sort((a, b) =>
-        b.record.createdAt.localeCompare(a.record.createdAt),
-      );
+      return (await (await database).getAll('records'))
+        .map((entry) =>
+          validateEntry({
+            ...entry,
+            record: storedRecordSchema.parse(entry.record),
+          }),
+        )
+        .sort((a, b) => b.record.createdAt.localeCompare(a.record.createdAt));
     },
     async save(entry) {
       await (await database).put('records', validateEntry(entry));
